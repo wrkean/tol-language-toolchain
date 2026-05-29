@@ -1,0 +1,7 @@
+par foo(x, y) {
+    ang x = 2               -- Immutable by default
+    ang iiba y = 2          -- Mutable
+    dapat z: numero = 5     -- Constant, type should be annotated
+
+    ibalik x + y + z
+}

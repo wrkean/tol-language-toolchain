@@ -1,0 +1,635 @@
+# Grammar Specification (EBNF)
+
+> Notation used:
+>
+> - `=` defines a rule
+> - `|` is alternation
+> - `{ }` is zero or more repetitions
+> - `[ ]` is optional
+> - `( )` is grouping
+> - `" "` is a literal terminal
+> - `' '` is a literal terminal (alternative)
+> - `;` ends a rule
+
+---
+
+## 1. Lexical Elements
+
+### 1.1 Comments
+
+```ebnf
+comment         = line_comment | doc_comment | block_comment ;
+line_comment    = "--" { any_char_except_newline } newline ;
+doc_comment     = "---" { any_char_except_newline } newline ;
+block_comment   = "--[" { any_char } "]--" ;
+```
+
+### 1.2 Literals
+
+```ebnf
+literal         = number_lit
+                | string_lit
+                | fstring_lit
+                | bool_lit
+                | null_lit ;
+
+number_lit      = integer_lit | float_lit ;
+integer_lit     = digit { digit } ;
+float_lit       = digit { digit } "." digit { digit } ;
+
+string_lit      = '"' { string_char } '"' ;
+string_char     = any_char_except_double_quote | escape_seq ;
+escape_seq      = "\" ( "n" | "t" | "r" | '"' | "\" ) ;
+
+fstring_lit     = 'f"' { fstring_part } '"' ;
+fstring_part    = fstring_char | interpolation ;
+fstring_char    = any_char_except_double_quote_or_brace ;
+interpolation   = "{" expression "}" ;
+
+bool_lit        = "totoo" | "mali" ;
+null_lit        = "wala" ;
+
+digit           = "0" | "1" | "2" | "3" | "4"
+                | "5" | "6" | "7" | "8" | "9" ;
+```
+
+### 1.3 Identifiers
+
+```ebnf
+identifier      = ( letter | "_" ) { letter | digit | "_" } ;
+letter          = "a".."z" | "A".."Z" ;
+```
+
+### 1.4 Keywords
+
+```ebnf
+keyword         = "ang"     | "naiiba"   | "dapat"
+                | "par"     | "ibalik"
+                | "kung"    | "kungdi"
+                | "habang"  | "bawat"    | "sa"
+                | "uri"     | "impl"     | "pub"
+                | "pantahan"
+                | "subukan" | "o_kaya"   | "ay"
+                | "ayon"    | "mali"
+                | "gamit"   | "bilang"
+                | "pasulit" | "tiyakin"
+                | "totoo"   | "mali"     | "wala" ;
+```
+
+---
+
+## 2. Program Structure
+
+```ebnf
+program         = { top_level_decl } ;
+
+top_level_decl  = import_decl
+                | var_decl
+                | const_decl
+                | fn_decl
+                | struct_decl
+                | impl_decl
+                | error_decl
+                | test_decl ;
+```
+
+---
+
+## 3. Import Declaration
+
+```ebnf
+import_decl     = "gamit" module_path [ "bilang" identifier ] ;
+module_path     = identifier { "." identifier } ;
+```
+
+### Examples
+
+```
+gamit matematika
+gamit matematika.trigonometriya
+gamit matematika bilang mat
+```
+
+---
+
+## 4. Variable Declarations
+
+```ebnf
+var_decl        = ( immutable_decl | mutable_decl | const_decl ) ;
+
+immutable_decl  = "ang" identifier "=" expression ;
+mutable_decl    = "naiiba" identifier "=" expression ;
+const_decl      = "dapat" identifier ":" type_name "=" expression ;
+
+type_name       = "numero" | "teksto" | "totoo" | "listahan"
+                | "mapa"   | "wala"   | identifier ;
+```
+
+### Examples
+
+```
+ang x = 5
+naiiba y = 10
+dapat PI: numero = 3.14159
+```
+
+---
+
+## 5. Functions
+
+```ebnf
+fn_decl         = [ "pub" ] [ "pantahan" ] "par" [ "?" ] identifier
+                  "(" [ param_list ] ")" block ;
+
+param_list      = identifier { "," identifier } ;
+
+block           = "{" { statement } "}" ;
+
+closure         = inline_closure | block_closure ;
+inline_closure  = "(" [ param_list ] ")" "=>" expression ;
+block_closure   = "par" "(" [ param_list ] ")" block ;
+```
+
+### Examples
+
+```
+par sumahin(x, y) {
+    ibalik x + y
+}
+
+pub par? baka_error(landas) {
+    ang nilalaman = subukan buksan(landas)
+    ibalik nilalaman
+}
+
+pantahan par bago() {
+    ibalik @Sarili { x: 1, y: 2 }
+}
+
+ang doble = (x) => x * 2
+ang complex = par(x) {
+    ang y = x * 2
+    ibalik y + 1
+}
+```
+
+---
+
+## 6. Statements
+
+```ebnf
+statement       = var_decl
+                | assign_stmt
+                | return_stmt
+                | if_stmt
+                | while_stmt
+                | for_stmt
+                | expression_stmt ;
+
+assign_stmt     = assignable assign_op expression ;
+assignable      = identifier
+                | field_access
+                | meta_access ;
+
+assign_op       = "=" | "+=" | "-=" | "*=" | "/=" ;
+
+return_stmt     = "ibalik" [ expression ] ;
+
+expression_stmt = expression ;
+```
+
+---
+
+## 7. Control Flow
+
+### 7.1 Conditionals
+
+```ebnf
+if_stmt         = "kung" expression block
+                  { "kungdi" expression block }
+                  [ "kungdi" block ] ;
+```
+
+### Examples
+
+```
+kung x == y {
+    x += y
+} kungdi x > y {
+    x -= y
+} kungdi {
+    x = 0
+}
+```
+
+### 7.2 While Loop
+
+```ebnf
+while_stmt      = "habang" expression block ;
+```
+
+### Examples
+
+```
+habang totoo {
+    -- do stuff
+}
+```
+
+### 7.3 For-Each Loop
+
+```ebnf
+for_stmt        = "bawat" identifier "sa" expression block ;
+```
+
+### Examples
+
+```
+bawat item sa listahan {
+    i_print(item)
+}
+```
+
+---
+
+## 8. Structs
+
+```ebnf
+struct_decl     = [ "pub" ] "uri" identifier
+                  [ "[" { struct_static_field } "]" ]
+                  "{" { struct_field } "}" ;
+
+struct_static_field
+                = [ "pub" ] identifier "=" expression ;
+
+struct_field    = { field_annotation } [ "pub" ] identifier ";" ;
+
+field_annotation
+                = "@Sarili.kunin"
+                | "@Sarili.ibahin" ;
+
+struct_init     = identifier "{" [ field_init_list ] "}"
+                | "@Sarili" "{" [ field_init_list ] "}" ;
+
+field_init_list = field_init { "," field_init } ;
+field_init      = identifier ":" expression ;
+```
+
+### Examples
+
+```
+uri Tao [
+    instances_count = 0
+] {
+    @Sarili.kunin
+    pub pangalan;
+
+    @Sarili.kunin
+    @Sarili.ibahin
+    edad;
+}
+```
+
+---
+
+## 9. Impl Blocks
+
+```ebnf
+impl_decl       = "impl" identifier "{" { impl_item } "}" ;
+
+impl_item       = [ "pub" ] [ "pantahan" ] "par" [ "?" ] identifier
+                  "(" [ impl_param_list ] ")" block ;
+
+impl_param_list = identifier { "," identifier } ;
+```
+
+> Note: Instance methods access the current instance via `@sarili`.
+> Static methods access the type via `@Sarili`.
+
+### Examples
+
+```
+impl Tao {
+    pub pantahan par bago() {
+        @Sarili.instances_count += 1
+        ibalik @Sarili { pangalan: "Juan", edad: 20 }
+    }
+
+    pub par idagdag(iba) {
+        @sarili.edad += iba.kunin_edad()
+    }
+}
+```
+
+---
+
+## 10. Error Handling
+
+```ebnf
+error_decl      = "mali" identifier "{" { error_variant } "}" ;
+error_variant   = identifier ;
+
+try_expr        = "subukan" expression ;
+catch_expr      = try_expr "o_kaya" expression ;
+
+error_check     = expression "ay" "mali" ;
+```
+
+### Examples
+
+```
+mali DatabaseMali {
+    KoneksyonPumalya
+    RecordAyWala
+}
+
+par? kuha(id) {
+    ang record = subukan hanapin(id)
+    ibalik record
+}
+
+ang resulta = subukan kuha(1) o_kaya wala
+
+kung resulta ay mali {
+    i_print("May error!")
+}
+```
+
+---
+
+## 11. Pattern Matching
+
+```ebnf
+match_stmt      = "ayon" "sa" expression "{" { match_arm } "}" ;
+match_arm       = pattern "=>" ( expression | block ) "," ;
+pattern         = literal
+                | identifier
+                | "_" ;
+```
+
+### Examples
+
+```
+ayon sa value {
+    "ito" => "Tama",
+    "wala" => "Mali",
+    _ => "Ewan"
+}
+
+ayon sa uri(x) {
+    numero  => "numero ito",
+    teksto  => "teksto ito",
+    _       => "ewan"
+}
+```
+
+---
+
+## 12. Test Blocks
+
+```ebnf
+test_decl       = "pasulit" string_lit block ;
+assert_stmt     = "tiyakin" expression ;
+```
+
+### Examples
+
+```
+pasulit "sumahin: 1 + 1 ay 2" {
+    tiyakin sumahin(1, 1) == 2
+}
+```
+
+---
+
+## 13. Expressions
+
+```ebnf
+expression      = assignment_expr ;
+
+assignment_expr = logical_or_expr ;
+
+logical_or_expr = logical_and_expr { "o" logical_and_expr } ;
+logical_and_expr= equality_expr { "at" equality_expr } ;
+
+equality_expr   = relational_expr { ( "==" | "!=" ) relational_expr } ;
+relational_expr = additive_expr { ( "<" | ">" | "<=" | ">=" ) additive_expr } ;
+
+additive_expr   = multiplicative_expr { ( "+" | "-" ) multiplicative_expr } ;
+multiplicative_expr
+                = unary_expr { ( "*" | "/" | "%" ) unary_expr } ;
+
+unary_expr      = ( "!" | "-" ) unary_expr
+                | postfix_expr ;
+
+postfix_expr    = primary_expr { postfix_op } ;
+postfix_op      = "." identifier
+                | "(" [ arg_list ] ")"
+                | "[" expression "]" ;
+
+primary_expr    = literal
+                | identifier
+                | meta_expr
+                | struct_init
+                | list_lit
+                | map_lit
+                | closure
+                | match_stmt
+                | try_expr
+                | catch_expr
+                | "(" expression ")" ;
+
+arg_list        = expression { "," expression } ;
+```
+
+---
+
+## 14. Collection Literals
+
+```ebnf
+list_lit        = "[" [ list_items ] "]" ;
+list_items      = expression { "," expression } ;
+
+map_lit         = "#" "{" [ map_items ] "}" ;
+map_items       = map_entry { "," map_entry } ;
+map_entry       = expression ":" expression ;
+```
+
+### Examples
+
+```
+ang listahan = [1, 2, 3, 4, 5]
+ang mapa = #{ "pangalan": "Juan", "edad": 20 }
+```
+
+---
+
+## 15. Metadata (`@`) Expressions
+
+```ebnf
+meta_expr       = "@" meta_target "." meta_attr ;
+
+meta_target     = "sarili"          (* instance self *)
+                | "Sarili"          (* type/static self *)
+                | "par"             (* current function context *)
+                | "habang"          (* current while loop context *)
+                | "bawat"           (* current for-each loop context *)
+                | "file"            (* current file context *)
+                ;
+
+(* @sarili / @Sarili — inside uri or impl *)
+meta_attr       = identifier ;
+```
+
+### Defined Attributes per Context
+
+#### `@sarili` — current instance (inside `impl`)
+
+| Attribute         | Description                    |
+| ----------------- | ------------------------------ |
+| `@sarili.<field>` | Access instance field directly |
+
+#### `@Sarili` — current type (inside `impl`)
+
+| Attribute         | Description                            |
+| ----------------- | -------------------------------------- |
+| `@Sarili.<field>` | Access static field                    |
+| `@Sarili { ... }` | Construct an instance of this type     |
+| `@Sarili.kunin`   | Field annotation: auto-generate getter |
+| `@Sarili.ibahin`  | Field annotation: auto-generate setter |
+
+#### `@par` — current function
+
+| Attribute            | Description                             |
+| -------------------- | --------------------------------------- |
+| `@par.pangalan`      | Name of the current function            |
+| `@par.linya`         | Line number of the function declaration |
+| `@par.bilang_ng_arg` | Number of arguments passed              |
+| `@par.mga_argumento` | List of arguments passed                |
+
+#### `@bawat` — inside `bawat` loop
+
+| Attribute         | Description                            |
+| ----------------- | -------------------------------------- |
+| `@bawat.bilang`   | Current iteration index (0-based)      |
+| `@bawat.una`      | `totoo` if this is the first iteration |
+| `@bawat.huli`     | `totoo` if this is the last iteration  |
+| `@bawat.kabuuan`  | Total number of iterations             |
+| `@bawat.natitira` | Remaining iterations                   |
+
+#### `@habang` — inside `habang` loop
+
+| Attribute        | Description                          |
+| ---------------- | ------------------------------------ |
+| `@habang.bilang` | How many times the loop has iterated |
+
+#### `@file` — file level
+
+| Attribute        | Description         |
+| ---------------- | ------------------- |
+| `@file.pangalan` | Current filename    |
+| `@file.linya`    | Current line number |
+
+### Examples
+
+```
+bawat item sa listahan {
+    kung @bawat.una {
+        i_print("Una:")
+    }
+    i_print(f"[{@bawat.bilang}] {item}")
+    kung @bawat.huli {
+        i_print("Tapos na.")
+    }
+}
+
+par ano_ako() {
+    i_print(f"Ako ay {@par.pangalan}")
+    i_print(f"May {@par.bilang_ng_arg} na argumento")
+}
+```
+
+---
+
+## 16. Shadowing
+
+Variables can be re-declared in the same or inner scope using `ang` or `naiiba`,
+shadowing the previous binding. This is intentional and follows Rust's shadowing semantics.
+
+```
+ang x = 5
+ang x = x + 1       -- shadows previous x, x is now 6
+naiiba x = teksto(x) -- shadows again, x is now "6"
+```
+
+---
+
+## 17. Operator Precedence (High to Low)
+
+| Level | Operators         | Associativity |
+| ----- | ----------------- | ------------- |
+| 7     | `!` `-` (unary)   | Right         |
+| 6     | `*` `/` `%`       | Left          |
+| 5     | `+` `-`           | Left          |
+| 4     | `<` `>` `<=` `>=` | Left          |
+| 3     | `==` `!=`         | Left          |
+| 2     | `at` (and)        | Left          |
+| 1     | `o` (or)          | Left          |
+
+---
+
+## 18. Type System Notes
+
+- **Dynamically typed, strongly typed.** Types are checked at runtime.
+- No implicit coercions. `"edad: " + 20` is a runtime error.
+- Use built-in conversion functions: `teksto(x)`, `numero(x)`, etc.
+- `wala` is its own type. Checking for null uses `ay wala`.
+
+```
+kung x ay wala {
+    i_print("wala ito")
+}
+```
+
+---
+
+## 19. Full Example
+
+```
+--- Nagtatanggal ng duplicate sa isang listahan.
+par? tanggalin_duplicate(listahan) {
+    mali TanggalinMali {
+        WalangLaman
+    }
+
+    kung listahan ay wala {
+        subukan ibalik TanggalinMali.WalangLaman
+    }
+
+    naiiba resulta = []
+    naiiba nakita = #{}
+
+    bawat item sa listahan {
+        kung @bawat.una {
+            i_print("Nagsisimula...")
+        }
+
+        kung !nakita[item] {
+            resulta += [item]
+            nakita[item] = totoo
+        }
+
+        kung @bawat.huli {
+            i_print(f"Tapos! {@bawat.kabuuan} na item ang sinuri.")
+        }
+    }
+
+    ibalik resulta
+}
+
+pasulit "tanggalin_duplicate: gumagana" {
+    ang input = [1, 2, 2, 3, 3, 3]
+    ang output = subukan tanggalin_duplicate(input)
+    tiyakin output == [1, 2, 3]
+}
+```
