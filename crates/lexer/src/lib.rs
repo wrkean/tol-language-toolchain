@@ -16,6 +16,7 @@ pub struct Lexer<'src> {
 }
 
 impl<'src> Lexer<'src> {
+    /// Creates a new `Lexer` instance to lex `input`
     pub fn new(input: &'src str) -> Self {
         Self {
             input,
@@ -24,6 +25,8 @@ impl<'src> Lexer<'src> {
         }
     }
 
+    /// Runs the lexer and returns a stream of lexed tokens. May panic (this will be handled soon
+    /// with a more elegant error handling)
     pub fn run(&mut self) -> Vec<Token<'src>> {
         let mut lex = TokenKind::lexer(self.input);
         while let Some(result) = lex.next() {
